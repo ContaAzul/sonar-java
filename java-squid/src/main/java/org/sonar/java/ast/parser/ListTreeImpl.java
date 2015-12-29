@@ -19,7 +19,6 @@
  */
 package org.sonar.java.ast.parser;
 
-import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.sonar.java.model.JavaTree;
@@ -31,7 +30,6 @@ import org.sonar.sslr.grammar.GrammarRuleKey;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -70,31 +68,18 @@ public abstract class ListTreeImpl<T> extends JavaTree implements ListTree<T> {
   }
 
   @Override
-  public Iterator<Tree> childrenIterator() {
-    return new InterleaveIterator<>(ImmutableList.of(((Iterable<? extends Tree>) list).iterator(), separators.iterator()));
-  }
-  private static class InterleaveIterator<E> extends AbstractIterator<E>{
-
-    private final LinkedList<Iterator<? extends E>> iterables;
-
-    public InterleaveIterator(List<Iterator<? extends E>> iterables) {
-      super();
-      this.iterables = new LinkedList<>(iterables);
-    }
-
-    @Override
-    protected E computeNext() {
-      while(!iterables.isEmpty()) {
-        Iterator<? extends E> topIter = iterables.poll();
-        if(topIter.hasNext()) {
-          E result = topIter.next();
-          iterables.offer(topIter);
-          return result;
-        }
+  public Iterable<Tree> children() {
+    ImmutableList.Builder<Tree> builder = ImmutableList.builder();
+    Iterator<SyntaxToken> separatorIterator = separators.iterator();
+    for (Tree tree : (Iterable<? extends Tree>) list) {
+      builder.add(tree);
+      if (separatorIterator.hasNext()) {
+        builder.add(separatorIterator.next());
       }
-      return endOfData();
     }
+    return builder.build();
   }
+
   @Override
   public int size() {
     return list.size();
