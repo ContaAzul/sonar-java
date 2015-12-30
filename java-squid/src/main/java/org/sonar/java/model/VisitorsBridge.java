@@ -29,7 +29,6 @@ import org.sonar.java.CharsetAwareVisitor;
 import org.sonar.java.JavaVersionAwareVisitor;
 import org.sonar.java.SonarComponents;
 import org.sonar.java.ast.visitors.SonarSymbolTableVisitor;
-import org.sonar.java.ast.visitors.VisitorContext;
 import org.sonar.java.resolve.SemanticModel;
 import org.sonar.java.se.SymbolicExecutionVisitor;
 import org.sonar.plugins.java.api.JavaFileScanner;
@@ -39,7 +38,6 @@ import org.sonar.plugins.java.api.tree.CompilationUnitTree;
 import org.sonar.plugins.java.api.tree.ImportClauseTree;
 import org.sonar.plugins.java.api.tree.Tree;
 import org.sonar.squidbridge.AstScannerExceptionHandler;
-import org.sonar.squidbridge.api.SourceFile;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -58,8 +56,9 @@ public class VisitorsBridge {
   private SemanticModel semanticModel;
   private List<File> projectClasspath;
   private boolean analyseAccessors;
-  private VisitorContext context;
+  private File currentFile;
   private JavaVersion javaVersion;
+  private int scannedFiles;
 
   @VisibleForTesting
   public VisitorsBridge(JavaFileScanner visitor) {
@@ -107,6 +106,7 @@ public class VisitorsBridge {
   }
 
   public void visitFile(@Nullable Tree parsedTree) {
+    scannedFiles++;
     semanticModel = null;
     CompilationUnitTree tree = new JavaTree.CompilationUnitTreeImpl(null, Lists.<ImportClauseTree>newArrayList(), Lists.<Tree>newArrayList(), null);
     boolean fileParsed = parsedTree != null;
@@ -116,7 +116,7 @@ public class VisitorsBridge {
         try {
           semanticModel = SemanticModel.createFor(tree, getProjectClasspath());
         } catch (Exception e) {
-          LOG.error("Unable to create symbol table for : " + getContext().getFile().getAbsolutePath(), e);
+          LOG.error("Unable to create symbol table for : " + getCurrentFile().getAbsolutePath(), e);
           return;
         }
         createSonarSymbolTable(tree);
@@ -152,8 +152,7 @@ public class VisitorsBridge {
     CompilationUnitTree tree, SemanticModel semanticModel, boolean analyseAccessors, SonarComponents sonarComponents, boolean fileParsed) {
     return new DefaultJavaFileScannerContext(
       tree,
-      (SourceFile) getContext().peekSourceCode(),
-      getContext().getFile(),
+      getCurrentFile(),
       semanticModel,
       analyseAccessors,
       sonarComponents,
@@ -162,7 +161,7 @@ public class VisitorsBridge {
   }
 
   private boolean isNotJavaLangOrSerializable(String packageName) {
-    String name = getContext().getFile().getName();
+    String name = getCurrentFile().getName();
     return !(inJavaLang(packageName) || isAnnotation(packageName, name) || isSerializable(packageName, name));
   }
 
@@ -184,7 +183,7 @@ public class VisitorsBridge {
 
   private void createSonarSymbolTable(CompilationUnitTree tree) {
     if (sonarComponents != null) {
-      SonarSymbolTableVisitor symVisitor = new SonarSymbolTableVisitor(sonarComponents.symbolizableFor(getContext().getFile()), semanticModel);
+      SonarSymbolTableVisitor symVisitor = new SonarSymbolTableVisitor(sonarComponents.symbolizableFor(getCurrentFile()), semanticModel);
       symVisitor.visitCompilationUnit(tree);
     }
   }
@@ -197,11 +196,15 @@ public class VisitorsBridge {
     }
   }
 
-  public VisitorContext getContext() {
-    return context;
+  public void setCurrentFile(File currentFile) {
+    this.currentFile = currentFile;
   }
 
-  public void setContext(VisitorContext context) {
-    this.context = context;
+  public File getCurrentFile() {
+    return currentFile;
+  }
+
+  public int getScannedFiles() {
+    return scannedFiles;
   }
 }

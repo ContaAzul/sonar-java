@@ -20,7 +20,6 @@
 package org.sonar.java.model;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import org.sonar.java.AnalyzerMessage;
 import org.sonar.java.SonarComponents;
 import org.sonar.java.resolve.SemanticModel;
@@ -30,12 +29,10 @@ import org.sonar.plugins.java.api.JavaFileScannerContext;
 import org.sonar.plugins.java.api.JavaVersion;
 import org.sonar.plugins.java.api.tree.CompilationUnitTree;
 import org.sonar.plugins.java.api.tree.Tree;
-import org.sonar.squidbridge.api.SourceFile;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -67,8 +64,7 @@ public class VisitorsBridgeForTests extends VisitorsBridge {
   @Override
   protected JavaFileScannerContext createScannerContext(CompilationUnitTree tree, SemanticModel semanticModel, boolean analyseAccessors,
                                                         SonarComponents sonarComponents, boolean failedParsing) {
-    testContext = new TestJavaFileScannerContext(
-      tree, (SourceFile) getContext().peekSourceCode(), getContext().getFile(), semanticModel, analyseAccessors, sonarComponents, getJavaVersion(), failedParsing);
+    testContext = new TestJavaFileScannerContext(tree, getCurrentFile(), semanticModel, analyseAccessors, sonarComponents, getJavaVersion(), failedParsing);
     return testContext;
   }
 
@@ -80,9 +76,9 @@ public class VisitorsBridgeForTests extends VisitorsBridge {
 
     private final Set<AnalyzerMessage> issues = new HashSet<>();
 
-    public TestJavaFileScannerContext(CompilationUnitTree tree, SourceFile sourceFile, File file, SemanticModel semanticModel,
+    public TestJavaFileScannerContext(CompilationUnitTree tree, File file, SemanticModel semanticModel,
                                       boolean analyseAccessors, @Nullable SonarComponents sonarComponents, JavaVersion javaVersion, boolean failedParsing) {
-      super(tree, sourceFile, file, semanticModel, analyseAccessors, sonarComponents, javaVersion, failedParsing);
+      super(tree, file, semanticModel, analyseAccessors, sonarComponents, javaVersion, failedParsing);
     }
 
     public Set<AnalyzerMessage> getIssues() {
