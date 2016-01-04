@@ -25,11 +25,11 @@ import org.sonar.check.Priority;
 import org.sonar.check.Rule;
 import org.sonar.java.JavaVersionAwareVisitor;
 import org.sonar.java.model.ModifiersUtils;
+import org.sonar.java.model.declaration.MethodTreeImpl;
 import org.sonar.java.tag.Tag;
 import org.sonar.plugins.java.api.IssuableSubscriptionVisitor;
 import org.sonar.plugins.java.api.JavaVersion;
 import org.sonar.plugins.java.api.tree.ClassTree;
-import org.sonar.plugins.java.api.tree.MethodTree;
 import org.sonar.plugins.java.api.tree.Modifier;
 import org.sonar.plugins.java.api.tree.Tree;
 import org.sonar.squidbridge.annotations.ActivatedByDefault;
@@ -74,10 +74,14 @@ public class AbstractClassNoFieldShouldBeInterfaceCheck extends IssuableSubscrip
 
   private static boolean classHasNoFieldAndProtectedMethod(ClassTree tree) {
     for (Tree member : tree.members()) {
-      if (member.is(Tree.Kind.VARIABLE) || (member.is(Tree.Kind.METHOD) && ModifiersUtils.hasModifier(((MethodTree) member).modifiers(), Modifier.PROTECTED))) {
+      if (member.is(Tree.Kind.VARIABLE) || (member.is(Tree.Kind.METHOD) && isProtectedOrOverriding((MethodTreeImpl) member))) {
         return false;
       }
     }
     return true;
+  }
+
+  private static boolean isProtectedOrOverriding(MethodTreeImpl member) {
+    return ModifiersUtils.hasModifier(member.modifiers(), Modifier.PROTECTED) || member.isOverriding();
   }
 }
